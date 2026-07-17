@@ -24,7 +24,13 @@ public class ProductQueryDto
         ErrorMessage = "PageSize must be between 1 and 100.")]
     public int PageSize { get; set; } = 10;
 
+    [RegularExpression(
+        "^(id|name|price|quantity)$",
+        ErrorMessage = "SortBy must be one of: id, name, price, quantity.")]
     public string SortBy { get; set; } = "id";
 
+    [RegularExpression(
+        "^(asc|desc)$",
+        ErrorMessage = "SortOrder must be either asc or desc.")]
     public string SortOrder { get; set; } = "asc";
 }

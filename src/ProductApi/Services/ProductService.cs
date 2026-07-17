@@ -25,12 +25,16 @@ public class ProductService : IProductService
     {
         var products = await _productRepository.GetAllAsync(
             query.Search,
+            query.CategoryId,
+            query.SortBy,
+            query.SortOrder,
             query.Page,
             query.PageSize,
             cancellationToken);
 
         var totalItems = await _productRepository.CountAsync(
             query.Search,
+            query.CategoryId,
             cancellationToken);
 
         return new PagedResult<ProductResponseDto>
