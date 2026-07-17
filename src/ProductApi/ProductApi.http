@@ -1,0 +1,173 @@
+@ProductApi_HostAddress = http://localhost:5291
+
+### Check API health
+GET {{ProductApi_HostAddress}}/api/health
+Accept: application/json
+
+### Get project information
+GET {{ProductApi_HostAddress}}/api/info
+Accept: application/json
+
+### Get product list - first page
+GET {{ProductApi_HostAddress}}/api/products?page=1
+Accept: application/json
+
+### Get product list - second page
+GET {{ProductApi_HostAddress}}/api/products?page=2
+Accept: application/json
+
+### Search products by name - case insensitive
+GET {{ProductApi_HostAddress}}/api/products?search=SMART&page=1
+Accept: application/json
+
+### Get product detail - found
+GET {{ProductApi_HostAddress}}/api/products/2
+Accept: application/json
+
+### Get product detail - not found
+GET {{ProductApi_HostAddress}}/api/products/999
+Accept: application/json
+
+### Get product list - invalid page
+GET {{ProductApi_HostAddress}}/api/products?page=0
+Accept: application/json
+
+### Create product - valid
+POST {{ProductApi_HostAddress}}/api/products
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Mechanical Keyboard",
+  "categoryId": 3,
+  "price": 95.5,
+  "quantity": 0
+}
+
+### Create product - invalid name
+POST {{ProductApi_HostAddress}}/api/products
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "A",
+  "categoryId": 3,
+  "price": 10,
+  "quantity": 1
+}
+
+### Create product - invalid category
+POST {{ProductApi_HostAddress}}/api/products
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Monitor",
+  "categoryId": 0,
+  "price": 250,
+  "quantity": 4
+}
+
+### Create product - invalid price
+POST {{ProductApi_HostAddress}}/api/products
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Mouse",
+  "categoryId": 3,
+  "price": 0,
+  "quantity": 1
+}
+
+### Create product - invalid quantity
+POST {{ProductApi_HostAddress}}/api/products
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Mouse",
+  "categoryId": 3,
+  "price": 10,
+  "quantity": -1
+}
+
+### Create product - duplicate name in same category
+POST {{ProductApi_HostAddress}}/api/products
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "laptop",
+  "categoryId": 1,
+  "price": 1200,
+  "quantity": 5
+}
+
+### Create product - same name in different category
+POST {{ProductApi_HostAddress}}/api/products
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Laptop",
+  "categoryId": 2,
+  "price": 1300,
+  "quantity": 3
+}
+
+### Update product - found
+PUT {{ProductApi_HostAddress}}/api/products/4
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Gaming Keyboard",
+  "categoryId": 3,
+  "price": 129.99,
+  "quantity": 7
+}
+
+### Update product - duplicate name in same category
+PUT {{ProductApi_HostAddress}}/api/products/4
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "laptop",
+  "categoryId": 1,
+  "price": 1000,
+  "quantity": 1
+}
+
+### Update product - not found
+PUT {{ProductApi_HostAddress}}/api/products/999
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Missing Product",
+  "categoryId": 1,
+  "price": 10,
+  "quantity": 1
+}
+
+### Update product - invalid price
+PUT {{ProductApi_HostAddress}}/api/products/1
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Laptop",
+  "categoryId": 1,
+  "price": -5,
+  "quantity": 10
+}
+
+### Delete product - found
+DELETE {{ProductApi_HostAddress}}/api/products/4
+Accept: application/json
+
+### Delete product - not found
+DELETE {{ProductApi_HostAddress}}/api/products/999
+Accept: application/json
