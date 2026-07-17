@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using ProductApi.Common.Responses;
 using ProductApi.Dtos;
 using ProductApi.Services;
 
@@ -19,29 +20,48 @@ public class ProductsController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(
-        typeof(ProductListResponseDto),
+        typeof(ApiResponse<ProductListResponseDto>),
         StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ProductListResponseDto>> GetAll(
+    [ProducesResponseType(
+        typeof(ApiResponse<ProductListResponseDto>),
+        StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse<ProductListResponseDto>>> GetAll(
         [FromQuery] string? search,
         [FromQuery] int page = 1,
         CancellationToken cancellationToken = default)
     {
         if (page < 1)
         {
-            return BadRequest(new
+            var errorResponse = new ApiResponse<ProductListResponseDto>
             {
-                message = "Page must be greater than or equal to 1."
-            });
+                Success = false,
+                Message = "Validation failed.",
+                Errors = new
+                {
+                    page = new[]
+                    {
+                        "Page must be greater than or equal to 1."
+                    }
+                }
+            };
+
+            return BadRequest(errorResponse);
         }
 
-        var response = await _productService.GetAllAsync(
+        var products = await _productService.GetAllAsync(
             search,
             page,
             PageSize,
             cancellationToken);
 
-        return Ok(response);
+        var apiResponse = new ApiResponse<ProductListResponseDto>
+        {
+            Success = true,
+            Message = "Products retrieved successfully.",
+            Data = products
+        };
+
+        return Ok(apiResponse);
     }
 
     [HttpGet("{id:int}")]
