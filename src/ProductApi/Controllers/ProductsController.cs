@@ -94,11 +94,15 @@ public class ProductsController : ControllerBase
 
     [HttpPost]
     [ProducesResponseType(
-        typeof(ProductResponseDto),
+        typeof(ApiResponse<ProductResponseDto>),
         StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<ProductResponseDto>> Create(
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ApiResponse<ProductResponseDto>>> Create(
         [FromBody] ProductCreateDto request,
         CancellationToken cancellationToken)
     {
@@ -108,17 +112,26 @@ public class ProductsController : ControllerBase
 
         if (result.Status == ProductWriteStatus.DuplicateName)
         {
-            return DuplicateNameConflict(request.CategoryId);
+            throw new ConflictException(
+                "A product with the same name already exists "
+                + $"in category {request.CategoryId}.");
         }
 
         var product = result.Product
             ?? throw new InvalidOperationException(
                 "The created product response was not available.");
 
+        var response = new ApiResponse<ProductResponseDto>
+        {
+            Success = true,
+            Message = "Product created successfully.",
+            Data = product
+        };
+
         return CreatedAtAction(
             nameof(GetById),
             new { id = product.Id },
-            product);
+            response);
     }
 
     [HttpPut("{id:int}")]

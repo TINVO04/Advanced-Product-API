@@ -42,10 +42,14 @@ public sealed class GlobalExceptionMiddleware
                 StatusCodes.Status400BadRequest,
                 badRequestException.Message,
                 badRequestException.Errors),
+            ConflictException => (
+                StatusCodes.Status409Conflict,
+                exception.Message,
+                null),
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "An unexpected error occurred.",
-                null)
+                null),
         };
 
         if (statusCode >= StatusCodes.Status500InternalServerError)
