@@ -10,8 +10,6 @@ namespace ProductApi.Controllers;
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
-    private const int PageSize = 2;
-
     private readonly IProductService _productService;
 
     public ProductsController(IProductService productService)
@@ -21,48 +19,27 @@ public class ProductsController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(
-        typeof(ApiResponse<ProductListResponseDto>),
+        typeof(ApiResponse<PagedResult<ProductResponseDto>>),
         StatusCodes.Status200OK)]
     [ProducesResponseType(
-        typeof(ApiResponse<ProductListResponseDto>),
+        typeof(ApiResponse<object>),
         StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ApiResponse<ProductListResponseDto>>> GetAll(
-        [FromQuery] string? search,
-        [FromQuery] int page = 1,
+    public async Task<ActionResult<ApiResponse<PagedResult<ProductResponseDto>>>> GetAll(
+        [FromQuery] ProductQueryDto query,
         CancellationToken cancellationToken = default)
     {
-        if (page < 1)
-        {
-            var errorResponse = new ApiResponse<ProductListResponseDto>
-            {
-                Success = false,
-                Message = "Validation failed.",
-                Errors = new
-                {
-                    page = new[]
-                    {
-                        "Page must be greater than or equal to 1."
-                    }
-                }
-            };
-
-            return BadRequest(errorResponse);
-        }
-
         var products = await _productService.GetAllAsync(
-            search,
-            page,
-            PageSize,
+            query,
             cancellationToken);
 
-        var apiResponse = new ApiResponse<ProductListResponseDto>
+        var response = new ApiResponse<PagedResult<ProductResponseDto>>
         {
             Success = true,
             Message = "Products retrieved successfully.",
             Data = products
         };
 
-        return Ok(apiResponse);
+        return Ok(response);
     }
 
     [HttpGet("{id:int}")]
