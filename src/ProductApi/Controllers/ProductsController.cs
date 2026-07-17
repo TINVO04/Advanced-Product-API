@@ -136,12 +136,18 @@ public class ProductsController : ControllerBase
 
     [HttpPut("{id:int}")]
     [ProducesResponseType(
-        typeof(ProductResponseDto),
+        typeof(ApiResponse<ProductResponseDto>),
         StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<ProductResponseDto>> Update(
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status404NotFound)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ApiResponse<ProductResponseDto>>> Update(
         [FromRoute] int id,
         [FromBody] ProductUpdateDto request,
         CancellationToken cancellationToken)
@@ -153,19 +159,29 @@ public class ProductsController : ControllerBase
 
         if (result.Status == ProductWriteStatus.NotFound)
         {
-            return ProductNotFound(id);
+            throw new NotFoundException(
+                $"Product with id {id} was not found.");
         }
 
         if (result.Status == ProductWriteStatus.DuplicateName)
         {
-            return DuplicateNameConflict(request.CategoryId);
+            throw new ConflictException(
+                "A product with the same name already exists "
+                + $"in category {request.CategoryId}.");
         }
 
         var product = result.Product
             ?? throw new InvalidOperationException(
                 "The updated product response was not available.");
 
-        return Ok(product);
+        var response = new ApiResponse<ProductResponseDto>
+        {
+            Success = true,
+            Message = "Product updated successfully.",
+            Data = product
+        };
+
+        return Ok(response);
     }
 
     [HttpDelete("{id:int}")]
