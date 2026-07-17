@@ -186,7 +186,9 @@ public class ProductsController : ControllerBase
 
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(
         [FromRoute] int id,
         CancellationToken cancellationToken)
@@ -197,28 +199,10 @@ public class ProductsController : ControllerBase
 
         if (result.Status == ProductWriteStatus.NotFound)
         {
-            return ProductNotFound(id);
+            throw new NotFoundException(
+                $"Product with id {id} was not found.");
         }
 
         return NoContent();
-    }
-
-    private NotFoundObjectResult ProductNotFound(int id)
-    {
-        return NotFound(new
-        {
-            message = $"Product with id {id} was not found."
-        });
-    }
-
-    private ConflictObjectResult DuplicateNameConflict(
-        int categoryId)
-    {
-        return Conflict(new
-        {
-            message =
-                "A product with the same name already exists "
-                + $"in category {categoryId}."
-        });
     }
 }
