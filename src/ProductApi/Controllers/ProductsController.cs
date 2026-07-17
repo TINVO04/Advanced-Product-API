@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using ProductApi.Common.Exceptions;
 using ProductApi.Common.Responses;
 using ProductApi.Dtos;
 using ProductApi.Services;
@@ -66,23 +67,29 @@ public class ProductsController : ControllerBase
 
     [HttpGet("{id:int}")]
     [ProducesResponseType(
-        typeof(ProductResponseDto),
+        typeof(ApiResponse<ProductResponseDto>),
         StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ProductResponseDto>> GetById(
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<ProductResponseDto>>> GetById(
         [FromRoute] int id,
         CancellationToken cancellationToken)
     {
         var product = await _productService.GetByIdAsync(
             id,
-            cancellationToken);
+            cancellationToken)
+            ?? throw new NotFoundException(
+                $"Product with id {id} was not found.");
 
-        if (product is null)
+        var response = new ApiResponse<ProductResponseDto>
         {
-            return ProductNotFound(id);
-        }
+            Success = true,
+            Message = "Product retrieved successfully.",
+            Data = product
+        };
 
-        return Ok(product);
+        return Ok(response);
     }
 
     [HttpPost]

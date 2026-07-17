@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ProductApi.Data;
+using ProductApi.Middleware;
 using ProductApi.Repositories;
 using ProductApi.Services;
 
@@ -27,6 +28,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseHttpsRedirection();
 
