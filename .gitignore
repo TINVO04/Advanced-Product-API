@@ -1,0 +1,40 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio user-specific files
+.vs/
+*.user
+*.suo
+
+# Visual Studio Code local settings
+.vscode/
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Test results and coverage
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# NuGet generated files and local packages
+*.nupkg
+*.snupkg
+packages/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Local-only course and AI working files
+AI_WORKING_PROCESS_LOCAL.md
+VietProDev_NET_Roadmap_Tuan_*.docx
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+appsettings.Local.json
