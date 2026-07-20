@@ -2,7 +2,7 @@
 
 Đây là project Product API của tuần 6, được làm tiếp từ project tuần trước.
 
-Trong Day 1 mình tập trung vào việc chuẩn hóa response và xử lý exception chung cho toàn bộ API. Sang Day 2 mình làm phần lấy danh sách sản phẩm với tìm kiếm, lọc, sắp xếp và phân trang.
+Trong Day 1 mình tập trung vào việc chuẩn hóa response và xử lý exception chung cho toàn bộ API. Sang Day 2 mình làm phần lấy danh sách sản phẩm với tìm kiếm, lọc, sắp xếp và phân trang. Đến Day 3 mình bổ sung Category API và thiết lập quan hệ giữa Category với Product.
 
 ## Công nghệ sử dụng
 
@@ -34,6 +34,17 @@ Trong Day 1 mình tập trung vào việc chuẩn hóa response và xử lý exc
 - Giới hạn `pageSize` từ 1 đến 100.
 - Dùng chung điều kiện tìm kiếm và lọc khi lấy danh sách và đếm tổng số bản ghi.
 - Sắp xếp trước khi dùng `Skip` và `Take` để kết quả giữa các trang ổn định.
+
+## Những phần đã làm trong Day 3
+
+- Tạo Category API theo cấu trúc Controller, Service và Repository.
+- Hỗ trợ đầy đủ các thao tác lấy danh sách, lấy theo ID, thêm, cập nhật và xóa Category.
+- Thiết lập quan hệ một-nhiều giữa Category và Product.
+- Tạo migration cho bảng Categories, dữ liệu mẫu và foreign key.
+- Kiểm tra Category tồn tại trước khi thêm hoặc cập nhật Product.
+- Không cho xóa Category nếu vẫn còn Product sử dụng Category đó.
+- Bổ sung `categoryName` trong response của Product.
+- Dùng `Include` để lấy Category khi đọc Product.
 
 ## Cấu trúc thư mục chính
 
@@ -118,6 +129,19 @@ Ví dụ:
 GET /api/products?search=phone&categoryId=1&sortBy=price&sortOrder=desc&page=1&pageSize=10
 ```
 
+Response Product trong Day 3 có thêm tên Category:
+
+```json
+{
+  "id": 1,
+  "name": "Laptop",
+  "categoryId": 1,
+  "categoryName": "Electronics",
+  "price": 1500.00,
+  "quantity": 10
+}
+```
+
 ## Các endpoint
 
 | Method | Endpoint | Chức năng |
@@ -127,6 +151,11 @@ GET /api/products?search=phone&categoryId=1&sortBy=price&sortOrder=desc&page=1&p
 | `POST` | `/api/products` | Thêm sản phẩm |
 | `PUT` | `/api/products/{id}` | Cập nhật sản phẩm |
 | `DELETE` | `/api/products/{id}` | Xóa sản phẩm |
+| `GET` | `/api/categories` | Lấy danh sách Category |
+| `GET` | `/api/categories/{id}` | Lấy Category theo ID |
+| `POST` | `/api/categories` | Thêm Category |
+| `PUT` | `/api/categories/{id}` | Cập nhật Category |
+| `DELETE` | `/api/categories/{id}` | Xóa Category nếu chưa có Product |
 | `GET` | `/api/health` | Kiểm tra API có đang chạy không |
 | `GET` | `/api/info` | Xem thông tin project |
 
@@ -135,11 +164,11 @@ GET /api/products?search=phone&categoryId=1&sortBy=price&sortOrder=desc&page=1&p
 | Status                        | Trường hợp                                   |
 | ----------------------------- | ----------------------------------------------- |
 | `200 OK`                    | Lấy hoặc cập nhật dữ liệu thành công    |
-| `201 Created`               | Tạo sản phẩm thành công                    |
-| `204 No Content`            | Xóa sản phẩm thành công                    |
-| `400 Bad Request`           | Dữ liệu gửi lên không hợp lệ             |
-| `404 Not Found`             | Không tìm thấy sản phẩm                    |
-| `409 Conflict`              | Tên sản phẩm bị trùng trong cùng category |
+| `201 Created`               | Tạo Product hoặc Category thành công       |
+| `204 No Content`            | Xóa Product hoặc Category thành công       |
+| `400 Bad Request`           | Dữ liệu không hợp lệ hoặc Category không tồn tại |
+| `404 Not Found`             | Không tìm thấy Product hoặc Category       |
+| `409 Conflict`              | Dữ liệu bị trùng hoặc Category vẫn còn Product |
 | `500 Internal Server Error` | Có lỗi ngoài dự kiến ở server             |
 
 ## Cách chạy project
@@ -249,6 +278,34 @@ Sau Day 1 mình hiểu rõ hơn cách middleware bắt exception, cách phân ch
 | `sortBy` không hợp lệ | `400 Bad Request` |
 | `sortOrder` không hợp lệ | `400 Bad Request` |
 | Sắp xếp kết hợp phân trang | Sắp xếp trước rồi mới lấy dữ liệu của trang |
+
+## Kết quả test Day 3
+
+| Trường hợp test | Kết quả |
+| --- | --- |
+| GET danh sách Category | `200 OK` |
+| GET Category theo ID | `200 OK` hoặc `404 Not Found` |
+| POST Category hợp lệ | `201 Created` |
+| POST tên Category không hợp lệ | `400 Bad Request` |
+| POST tên Category bị trùng | `409 Conflict` |
+| PUT Category hợp lệ | `200 OK` |
+| DELETE Category không có Product | `204 No Content` |
+| DELETE Category đang có Product | `409 Conflict` |
+| POST Product với Category không tồn tại | `400 Bad Request` |
+| PUT Product với Category không tồn tại | `400 Bad Request` |
+| GET danh sách và chi tiết Product | Có `categoryName` đúng với `categoryId` |
+| POST và PUT Product hợp lệ | Response có `categoryName` đúng |
+
+## Ghi chú Day 3
+
+Một số điểm mình rút ra trong lúc làm:
+
+- `CategoryId` là foreign key, còn `Category` là navigation property để truy cập dữ liệu liên quan.
+- Mình kiểm tra Category tồn tại ở service để trả lỗi dễ hiểu, đồng thời vẫn giữ foreign key ở database làm lớp bảo vệ cuối.
+- Khi xóa Category, mình kiểm tra Product liên quan trước để trả `409 Conflict` thay vì để lỗi database trở thành `500`.
+- `DeleteBehavior.Restrict` giúp database không tự động xóa Product khi Category bị xóa.
+- `Include` giúp EF Core lấy Product và Category trong cùng truy vấn để map `categoryName` vào response.
+- DTO giúp API chỉ nhận và trả những field cần thiết, không trả trực tiếp entity của EF Core.
 
 ## Ghi chú Day 2
 

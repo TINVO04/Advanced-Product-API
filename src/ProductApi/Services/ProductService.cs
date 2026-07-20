@@ -13,10 +13,14 @@ public class ProductService : IProductService
         "IX_Products_Name_CategoryId";
 
     private readonly IProductRepository _productRepository;
+    private readonly ICategoryRepository _categoryRepository;
 
-    public ProductService(IProductRepository productRepository)
+    public ProductService(
+        IProductRepository productRepository,
+        ICategoryRepository categoryRepository)
     {
         _productRepository = productRepository;
+        _categoryRepository = categoryRepository;
     }
 
     public async Task<PagedResult<ProductResponseDto>> GetAllAsync(
@@ -67,6 +71,15 @@ public class ProductService : IProductService
         ProductCreateDto request,
         CancellationToken cancellationToken)
     {
+        var category = await _categoryRepository.GetByIdAsync(
+            request.CategoryId,
+            cancellationToken);
+
+        if (category is null)
+        {
+            return CategoryNotFoundResult();
+        }
+
         var normalizedName = NormalizeName(request.Name);
 
         var isDuplicate =
@@ -85,6 +98,7 @@ public class ProductService : IProductService
         {
             Name = normalizedName,
             CategoryId = request.CategoryId,
+            Category = category,
             Price = request.Price,
             Quantity = request.Quantity
         };
@@ -120,6 +134,15 @@ public class ProductService : IProductService
             return NotFoundResult();
         }
 
+        var category = await _categoryRepository.GetByIdAsync(
+            request.CategoryId,
+            cancellationToken);
+
+        if (category is null)
+        {
+            return CategoryNotFoundResult();
+        }
+
         var normalizedName = NormalizeName(request.Name);
 
         var isDuplicate =
@@ -136,6 +159,7 @@ public class ProductService : IProductService
 
         product.Name = normalizedName;
         product.CategoryId = request.CategoryId;
+        product.Category = category;
         product.Price = request.Price;
         product.Quantity = request.Quantity;
 
@@ -179,6 +203,7 @@ public class ProductService : IProductService
             Id = product.Id,
             Name = product.Name,
             CategoryId = product.CategoryId,
+            CategoryName = product.Category.Name,
             Price = product.Price,
             Quantity = product.Quantity
         };
@@ -217,6 +242,14 @@ public class ProductService : IProductService
         return new ProductWriteResult
         {
             Status = ProductWriteStatus.NotFound
+        };
+    }
+
+    private static ProductWriteResult CategoryNotFoundResult()
+    {
+        return new ProductWriteResult
+        {
+            Status = ProductWriteStatus.CategoryNotFound
         };
     }
 
