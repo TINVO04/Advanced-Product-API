@@ -6,6 +6,7 @@ public enum ProductWriteStatus
 {
     Success,
     NotFound,
+    CategoryNotFound,
     DuplicateName
 }
 

@@ -13,10 +13,14 @@ public class ProductService : IProductService
         "IX_Products_Name_CategoryId";
 
     private readonly IProductRepository _productRepository;
+    private readonly ICategoryRepository _categoryRepository;
 
-    public ProductService(IProductRepository productRepository)
+    public ProductService(
+        IProductRepository productRepository,
+        ICategoryRepository categoryRepository)
     {
         _productRepository = productRepository;
+        _categoryRepository = categoryRepository;
     }
 
     public async Task<PagedResult<ProductResponseDto>> GetAllAsync(
@@ -67,6 +71,15 @@ public class ProductService : IProductService
         ProductCreateDto request,
         CancellationToken cancellationToken)
     {
+        var categoryExists = await _categoryRepository.ExistsByIdAsync(
+            request.CategoryId,
+            cancellationToken);
+
+        if (!categoryExists)
+        {
+            return CategoryNotFoundResult();
+        }
+
         var normalizedName = NormalizeName(request.Name);
 
         var isDuplicate =
@@ -118,6 +131,15 @@ public class ProductService : IProductService
         if (product is null)
         {
             return NotFoundResult();
+        }
+
+        var categoryExists = await _categoryRepository.ExistsByIdAsync(
+            request.CategoryId,
+            cancellationToken);
+
+        if (!categoryExists)
+        {
+            return CategoryNotFoundResult();
         }
 
         var normalizedName = NormalizeName(request.Name);
@@ -217,6 +239,14 @@ public class ProductService : IProductService
         return new ProductWriteResult
         {
             Status = ProductWriteStatus.NotFound
+        };
+    }
+
+    private static ProductWriteResult CategoryNotFoundResult()
+    {
+        return new ProductWriteResult
+        {
+            Status = ProductWriteStatus.CategoryNotFound
         };
     }
 

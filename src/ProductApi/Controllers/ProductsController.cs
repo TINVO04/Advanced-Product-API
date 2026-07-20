@@ -87,6 +87,12 @@ public class ProductsController : ControllerBase
             request,
             cancellationToken);
 
+        if (result.Status == ProductWriteStatus.CategoryNotFound)
+        {
+            throw new BadRequestException(
+                $"Category with id {request.CategoryId} does not exist.");
+        }
+
         if (result.Status == ProductWriteStatus.DuplicateName)
         {
             throw new ConflictException(
@@ -138,6 +144,12 @@ public class ProductsController : ControllerBase
         {
             throw new NotFoundException(
                 $"Product with id {id} was not found.");
+        }
+
+        if (result.Status == ProductWriteStatus.CategoryNotFound)
+        {
+            throw new BadRequestException(
+                $"Category with id {request.CategoryId} does not exist.");
         }
 
         if (result.Status == ProductWriteStatus.DuplicateName)

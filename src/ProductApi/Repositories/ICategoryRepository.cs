@@ -16,6 +16,10 @@ public interface ICategoryRepository
         int? excludedCategoryId,
         CancellationToken cancellationToken);
 
+    Task<bool> ExistsByIdAsync(
+        int id,
+        CancellationToken cancellationToken);
+
     Task AddAsync(
         Category category,
         CancellationToken cancellationToken);
