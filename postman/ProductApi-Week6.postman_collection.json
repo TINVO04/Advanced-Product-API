@@ -1,0 +1,1105 @@
+{
+  "info": {
+    "_postman_id": "a74944a7-03e4-4a19-99a8-c3afe3c2fe50",
+    "name": "ProductApi Advanced - Week 6 Regression",
+    "description": "Bộ regression test tự chạy cho ProductApi Advanced tuần 6: response wrapper, validation, Category/Product CRUD, search/filter/sort/pagination, soft delete và restore. Collection tự tạo dữ liệu riêng theo timestamp và dọn dữ liệu sau khi chạy.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('runId')) {",
+          "    const runId = Date.now().toString();",
+          "    pm.collectionVariables.set('runId', runId);",
+          "    pm.collectionVariables.set('primaryCategoryName', `Regression Category ${runId}`);",
+          "    pm.collectionVariables.set('secondaryCategoryName', `Regression Secondary ${runId}`);",
+          "    pm.collectionVariables.set('productName', `Regression Product ${runId}`);",
+          "    pm.collectionVariables.set('updatedProductName', `Regression Product Updated ${runId}`);",
+          "    pm.collectionVariables.set('duplicateCategoryName', `Duplicate Test Category ${runId}`);",
+          "    pm.collectionVariables.set('duplicateProductName', `Duplicate Restore Product ${runId}`);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5291",
+      "type": "string"
+    },
+    {
+      "key": "runId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "primaryCategoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "secondaryCategoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "duplicateCategoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deletedDuplicateProductId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "activeDuplicateProductId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Shared and health",
+      "item": [
+        {
+          "name": "Health returns 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Health response has the expected shape', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('Healthy');",
+                  "    pm.expect(json.message).to.eql('Product API is running.');",
+                  "    pm.expect(json).to.have.property('timestampUtc');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/health"
+          }
+        },
+        {
+          "name": "Info returns 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Info response has the expected shape', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.projectName).to.eql('ProductApi');",
+                  "    pm.expect(json.version).to.eql('1.0.0');",
+                  "    pm.expect(json).to.have.property('framework');",
+                  "    pm.expect(json).to.have.property('environment');",
+                  "    pm.expect(json).to.have.property('description');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/info"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Category API",
+      "item": [
+        {
+          "name": "Create primary category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Created category is returned', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(true);",
+                  "    pm.expect(json.data.name).to.eql(pm.collectionVariables.get('primaryCategoryName'));",
+                  "    pm.collectionVariables.set('primaryCategoryId', json.data.id.toString());",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"  {{primaryCategoryName}}   \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/categories"
+          }
+        },
+        {
+          "name": "Create secondary category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('secondaryCategoryId', json.data.id.toString());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{secondaryCategoryName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/categories"
+          }
+        },
+        {
+          "name": "Get category list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Primary category is in the list', () => {",
+                  "    const json = pm.response.json();",
+                  "    const id = Number(pm.collectionVariables.get('primaryCategoryId'));",
+                  "    pm.expect(json.data.some(category => category.id === id)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/categories"
+          }
+        },
+        {
+          "name": "Get category detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Correct category is returned', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.id).to.eql(Number(pm.collectionVariables.get('primaryCategoryId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/categories/{{primaryCategoryId}}"
+          }
+        },
+        {
+          "name": "Reject duplicate category name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Conflict response uses wrapper', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{primaryCategoryName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/categories"
+          }
+        },
+        {
+          "name": "Reject category name after whitespace normalization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Validation errors are returned', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.errors).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \" A      \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/categories"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Product CRUD and list",
+      "item": [
+        {
+          "name": "Create product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Created product is normalized and returned', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(true);",
+                  "    pm.expect(json.data.name).to.eql(pm.collectionVariables.get('productName'));",
+                  "    pm.expect(json.data.categoryId).to.eql(Number(pm.collectionVariables.get('primaryCategoryId')));",
+                  "    pm.collectionVariables.set('productId', json.data.id.toString());",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"  {{productName}}    \" ,\n  \"categoryId\": {{primaryCategoryId}},\n  \"price\": 125.50,\n  \"quantity\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/products"
+          }
+        },
+        {
+          "name": "Get product detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Category name is included', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.categoryName).to.eql(pm.collectionVariables.get('primaryCategoryName'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{productId}}"
+          }
+        },
+        {
+          "name": "Search filter sort and paginate products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Paged result contains the created product', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.pageNumber).to.eql(1);",
+                  "    pm.expect(json.data.pageSize).to.eql(10);",
+                  "    pm.expect(json.data.totalItems).to.be.at.least(1);",
+                  "    pm.expect(json.data.totalPages).to.be.at.least(1);",
+                  "    const id = Number(pm.collectionVariables.get('productId'));",
+                  "    pm.expect(json.data.items.some(product => product.id === id)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?search={{runId}}&categoryId={{primaryCategoryId}}&page=1&pageSize=10&sortBy=price&sortOrder=desc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "{{runId}}"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{primaryCategoryId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "price"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject invalid pagination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('PageSize validation error is returned', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.errors).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?page=0&pageSize=101"
+          }
+        },
+        {
+          "name": "Reject invalid sort field",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?sortBy=createdAt&sortOrder=sideways"
+          }
+        },
+        {
+          "name": "Reject product name after whitespace normalization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \" A       \" ,\n  \"categoryId\": {{primaryCategoryId}},\n  \"price\": 10,\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/products"
+          }
+        },
+        {
+          "name": "Reject missing category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Missing Category Product {{runId}}\",\n  \"categoryId\": 2147483647,\n  \"price\": 10,\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/products"
+          }
+        },
+        {
+          "name": "Reject duplicate product in same category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{productName}}\",\n  \"categoryId\": {{primaryCategoryId}},\n  \"price\": 999,\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/products"
+          }
+        },
+        {
+          "name": "Update product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Product fields are updated', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.name).to.eql(pm.collectionVariables.get('updatedProductName'));",
+                  "    pm.expect(json.data.price).to.eql(155.75);",
+                  "    pm.expect(json.data.quantity).to.eql(12);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{updatedProductName}}\",\n  \"categoryId\": {{primaryCategoryId}},\n  \"price\": 155.75,\n  \"quantity\": 12\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/products/{{productId}}"
+          }
+        },
+        {
+          "name": "Reject deleting category with active product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/categories/{{primaryCategoryId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Soft delete and restore",
+      "item": [
+        {
+          "name": "Soft delete product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', () => pm.response.to.have.status(204));",
+                  "pm.test('Response has no body', () => pm.expect(pm.response.text()).to.eql(''));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{productId}}"
+          }
+        },
+        {
+          "name": "Soft-deleted product is hidden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{productId}}"
+          }
+        },
+        {
+          "name": "Restore product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Restored product is returned', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.id).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{productId}}/restore"
+          }
+        },
+        {
+          "name": "Restored product is visible",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{productId}}"
+          }
+        },
+        {
+          "name": "Reject restoring active product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{productId}}/restore"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Restore conflicts",
+      "item": [
+        {
+          "name": "Create duplicate-test category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('duplicateCategoryId', json.data.id.toString());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{duplicateCategoryName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/categories"
+          }
+        },
+        {
+          "name": "Create product for duplicate restore",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('deletedDuplicateProductId', json.data.id.toString());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{duplicateProductName}}\",\n  \"categoryId\": {{duplicateCategoryId}},\n  \"price\": 40,\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/products"
+          }
+        },
+        {
+          "name": "Delete original duplicate-test product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{deletedDuplicateProductId}}"
+          }
+        },
+        {
+          "name": "Create active product with same name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('activeDuplicateProductId', json.data.id.toString());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{duplicateProductName}}\",\n  \"categoryId\": {{duplicateCategoryId}},\n  \"price\": 45,\n  \"quantity\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/products"
+          }
+        },
+        {
+          "name": "Reject restore when active duplicate exists",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{deletedDuplicateProductId}}/restore"
+          }
+        },
+        {
+          "name": "Delete active duplicate product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{activeDuplicateProductId}}"
+          }
+        },
+        {
+          "name": "Restore original after duplicate is deleted",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{deletedDuplicateProductId}}/restore"
+          }
+        },
+        {
+          "name": "Delete restored duplicate-test product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{deletedDuplicateProductId}}"
+          }
+        },
+        {
+          "name": "Delete duplicate-test category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/categories/{{duplicateCategoryId}}"
+          }
+        },
+        {
+          "name": "Reject restore when category is deleted",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{deletedDuplicateProductId}}/restore"
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Cleanup",
+      "item": [
+        {
+          "name": "Delete main product before category cleanup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{productId}}"
+          }
+        },
+        {
+          "name": "Delete primary category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/categories/{{primaryCategoryId}}"
+          }
+        },
+        {
+          "name": "Deleted category is hidden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/categories/{{primaryCategoryId}}"
+          }
+        },
+        {
+          "name": "Delete secondary category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', () => pm.response.to.have.status(204));",
+                  "pm.collectionVariables.unset('runId');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/categories/{{secondaryCategoryId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
