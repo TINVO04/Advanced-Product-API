@@ -14,6 +14,14 @@ public class AppDbContext : DbContext
 
     public DbSet<Category> Categories => Set<Category>();
 
+    public override Task<int> SaveChangesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        ApplyAuditFields();
+
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -41,6 +49,14 @@ public class AppDbContext : DbContext
             .HasIndex(category => category.Name)
             .IsUnique()
             .HasDatabaseName("IX_Categories_Name");
+
+        categoryEntity
+            .Property(category => category.CreatedAt)
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        categoryEntity
+            .Property(category => category.IsDeleted)
+            .HasDefaultValue(false);
 
         categoryEntity.HasData(
             new Category
@@ -95,6 +111,14 @@ public class AppDbContext : DbContext
             .HasForeignKey(product => product.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        productEntity
+            .Property(product => product.CreatedAt)
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        productEntity
+            .Property(product => product.IsDeleted)
+            .HasDefaultValue(false);
+
         productEntity.HasData(
             new Product
             {
@@ -120,5 +144,26 @@ public class AppDbContext : DbContext
                 Price = 120m,
                 Quantity = 30
             });
+    }
+
+    private void ApplyAuditFields()
+    {
+        var utcNow = DateTime.UtcNow;
+
+        foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                entry.Entity.CreatedAt = utcNow;
+                entry.Entity.UpdatedAt = null;
+                entry.Entity.DeletedAt = null;
+                entry.Entity.IsDeleted = false;
+            }
+            else if (entry.State == EntityState.Modified)
+            {
+                entry.Property(entity => entity.CreatedAt).IsModified = false;
+                entry.Entity.UpdatedAt = utcNow;
+            }
+        }
     }
 }

@@ -1,6 +1,6 @@
 namespace ProductApi.Models;
 
-public class Category
+public class Category : AuditableEntity
 {
     public int Id { get; set; }
 
