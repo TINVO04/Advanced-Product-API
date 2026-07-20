@@ -173,6 +173,56 @@ public class ProductsController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPatch("{id:int}/restore")]
+    [ProducesResponseType(
+        typeof(ApiResponse<ProductResponseDto>),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status404NotFound)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ApiResponse<ProductResponseDto>>> Restore(
+        [FromRoute] int id,
+        CancellationToken cancellationToken)
+    {
+        var result = await _productService.RestoreAsync(
+            id,
+            cancellationToken);
+
+        if (result.Status == ProductWriteStatus.NotFound)
+        {
+            throw new NotFoundException(
+                $"Deleted product with id {id} was not found.");
+        }
+
+        if (result.Status == ProductWriteStatus.CategoryNotFound)
+        {
+            throw new ConflictException(
+                "The product cannot be restored because its category "
+                + "does not exist or has been deleted.");
+        }
+
+        if (result.Status == ProductWriteStatus.DuplicateName)
+        {
+            throw new ConflictException(
+                "The product cannot be restored because an active product "
+                + "with the same name already exists in its category.");
+        }
+
+        var product = result.Product
+            ?? throw new InvalidOperationException(
+                "The restored product response was not available.");
+
+        return Ok(new ApiResponse<ProductResponseDto>
+        {
+            Success = true,
+            Message = "Product restored successfully.",
+            Data = product
+        });
+    }
+
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(

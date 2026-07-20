@@ -56,6 +56,17 @@ public class ProductRepository : IProductRepository
                 cancellationToken);
     }
 
+    public Task<Product?> GetDeletedByIdAsync(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        return _dbContext.Products
+            .Include(product => product.Category)
+            .FirstOrDefaultAsync(
+                product => product.Id == id && product.IsDeleted,
+                cancellationToken);
+    }
+
     public Task<bool> ExistsByNameAndCategoryAsync(
         string name,
         int categoryId,
@@ -83,6 +94,12 @@ public class ProductRepository : IProductRepository
     {
         product.IsDeleted = true;
         product.DeletedAt = DateTime.UtcNow;
+    }
+
+    public void Restore(Product product)
+    {
+        product.IsDeleted = false;
+        product.DeletedAt = null;
     }
 
     public async Task SaveChangesAsync(
