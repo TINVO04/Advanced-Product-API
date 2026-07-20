@@ -23,6 +23,7 @@ public class ProductRepository : IProductRepository
         CancellationToken cancellationToken)
     {
         var query = BuildQuery(search, categoryId)
+            .Include(product => product.Category)
             .AsNoTracking();
 
         var sortedQuery = ApplySorting(
@@ -48,9 +49,11 @@ public class ProductRepository : IProductRepository
         int id,
         CancellationToken cancellationToken)
     {
-        return _dbContext.Products.FirstOrDefaultAsync(
-            product => product.Id == id,
-            cancellationToken);
+        return _dbContext.Products
+            .Include(product => product.Category)
+            .FirstOrDefaultAsync(
+                product => product.Id == id,
+                cancellationToken);
     }
 
     public Task<bool> ExistsByNameAndCategoryAsync(

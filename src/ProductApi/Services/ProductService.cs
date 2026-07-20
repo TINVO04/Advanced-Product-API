@@ -71,11 +71,11 @@ public class ProductService : IProductService
         ProductCreateDto request,
         CancellationToken cancellationToken)
     {
-        var categoryExists = await _categoryRepository.ExistsByIdAsync(
+        var category = await _categoryRepository.GetByIdAsync(
             request.CategoryId,
             cancellationToken);
 
-        if (!categoryExists)
+        if (category is null)
         {
             return CategoryNotFoundResult();
         }
@@ -98,6 +98,7 @@ public class ProductService : IProductService
         {
             Name = normalizedName,
             CategoryId = request.CategoryId,
+            Category = category,
             Price = request.Price,
             Quantity = request.Quantity
         };
@@ -133,11 +134,11 @@ public class ProductService : IProductService
             return NotFoundResult();
         }
 
-        var categoryExists = await _categoryRepository.ExistsByIdAsync(
+        var category = await _categoryRepository.GetByIdAsync(
             request.CategoryId,
             cancellationToken);
 
-        if (!categoryExists)
+        if (category is null)
         {
             return CategoryNotFoundResult();
         }
@@ -158,6 +159,7 @@ public class ProductService : IProductService
 
         product.Name = normalizedName;
         product.CategoryId = request.CategoryId;
+        product.Category = category;
         product.Price = request.Price;
         product.Quantity = request.Quantity;
 
@@ -201,6 +203,7 @@ public class ProductService : IProductService
             Id = product.Id,
             Name = product.Name,
             CategoryId = product.CategoryId,
+            CategoryName = product.Category.Name,
             Price = product.Price,
             Quantity = product.Quantity
         };
