@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using ProductApi.Common.Responses;
+using ProductApi.Common.Utilities;
 using ProductApi.Dtos;
 using ProductApi.Models;
 using ProductApi.Repositories;
@@ -80,7 +81,7 @@ public class ProductService : IProductService
             return CategoryNotFoundResult();
         }
 
-        var normalizedName = NormalizeName(request.Name);
+        var normalizedName = TextNormalizer.NormalizeWhitespace(request.Name);
 
         var isDuplicate =
             await _productRepository.ExistsByNameAndCategoryAsync(
@@ -107,17 +108,11 @@ public class ProductService : IProductService
             product,
             cancellationToken);
 
-        try
-        {
-            await _productRepository.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException exception)
-            when (IsDuplicateNameException(exception))
-        {
-            return DuplicateNameResult();
-        }
+        var saved = await TrySaveChangesAsync(cancellationToken);
 
-        return SuccessResult(product);
+        return saved
+            ? SuccessResult(product)
+            : DuplicateNameResult();
     }
 
     public async Task<ProductWriteResult> UpdateAsync(
@@ -143,7 +138,7 @@ public class ProductService : IProductService
             return CategoryNotFoundResult();
         }
 
-        var normalizedName = NormalizeName(request.Name);
+        var normalizedName = TextNormalizer.NormalizeWhitespace(request.Name);
 
         var isDuplicate =
             await _productRepository.ExistsByNameAndCategoryAsync(
@@ -163,17 +158,11 @@ public class ProductService : IProductService
         product.Price = request.Price;
         product.Quantity = request.Quantity;
 
-        try
-        {
-            await _productRepository.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException exception)
-            when (IsDuplicateNameException(exception))
-        {
-            return DuplicateNameResult();
-        }
+        var saved = await TrySaveChangesAsync(cancellationToken);
 
-        return SuccessResult(product);
+        return saved
+            ? SuccessResult(product)
+            : DuplicateNameResult();
     }
 
     public async Task<ProductWriteResult> DeleteAsync(
@@ -232,17 +221,26 @@ public class ProductService : IProductService
 
         _productRepository.Restore(product);
 
+        var saved = await TrySaveChangesAsync(cancellationToken);
+
+        return saved
+            ? SuccessResult(product)
+            : DuplicateNameResult();
+    }
+
+    private async Task<bool> TrySaveChangesAsync(
+        CancellationToken cancellationToken)
+    {
         try
         {
             await _productRepository.SaveChangesAsync(cancellationToken);
+            return true;
         }
         catch (DbUpdateException exception)
             when (IsDuplicateNameException(exception))
         {
-            return DuplicateNameResult();
+            return false;
         }
-
-        return SuccessResult(product);
     }
 
     private static ProductResponseDto ToResponseDto(Product product)
@@ -256,15 +254,6 @@ public class ProductService : IProductService
             Price = product.Price,
             Quantity = product.Quantity
         };
-    }
-
-    private static string NormalizeName(string name)
-    {
-        return string.Join(
-            ' ',
-            name.Split(
-                (char[]?)null,
-                StringSplitOptions.RemoveEmptyEntries));
     }
 
     private static bool IsDuplicateNameException(

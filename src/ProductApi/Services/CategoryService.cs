@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using ProductApi.Common.Exceptions;
+using ProductApi.Common.Utilities;
 using ProductApi.Dtos;
 using ProductApi.Models;
 using ProductApi.Repositories;
@@ -47,7 +48,7 @@ public class CategoryService : ICategoryService
         CategoryCreateDto request,
         CancellationToken cancellationToken)
     {
-        var normalizedName = NormalizeName(request.Name);
+        var normalizedName = TextNormalizer.NormalizeWhitespace(request.Name);
 
         await EnsureNameIsUniqueAsync(
             normalizedName,
@@ -82,7 +83,7 @@ public class CategoryService : ICategoryService
             return null;
         }
 
-        var normalizedName = NormalizeName(request.Name);
+        var normalizedName = TextNormalizer.NormalizeWhitespace(request.Name);
 
         await EnsureNameIsUniqueAsync(
             normalizedName,
@@ -177,12 +178,4 @@ public class CategoryService : ICategoryService
         };
     }
 
-    private static string NormalizeName(string name)
-    {
-        return string.Join(
-            ' ',
-            name.Split(
-                (char[]?)null,
-                StringSplitOptions.RemoveEmptyEntries));
-    }
 }

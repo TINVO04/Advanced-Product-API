@@ -1,14 +1,15 @@
 using System.ComponentModel.DataAnnotations;
+using ProductApi.Common.Validation;
 
 namespace ProductApi.Dtos;
 
 public class ProductCreateDto
 {
     [Required(ErrorMessage = "Product name is required.")]
-    [StringLength(
+    [NormalizedStringLength(
+        2,
         100,
-        MinimumLength = 2,
-        ErrorMessage = "Product name must be between 2 and 100 characters.")]
+        ErrorMessage = "Product name must be between 2 and 100 characters after whitespace is normalized.")]
     public string Name { get; set; } = string.Empty;
 
     [Range(
