@@ -17,6 +17,7 @@ public class CategoryRepository : ICategoryRepository
         CancellationToken cancellationToken)
     {
         return await _dbContext.Categories
+            .Where(category => !category.IsDeleted)
             .AsNoTracking()
             .OrderBy(category => category.Id)
             .ToListAsync(cancellationToken);
@@ -28,7 +29,7 @@ public class CategoryRepository : ICategoryRepository
     {
         return _dbContext.Categories
             .FirstOrDefaultAsync(
-                category => category.Id == id,
+                category => category.Id == id && !category.IsDeleted,
                 cancellationToken);
     }
 
@@ -38,7 +39,8 @@ public class CategoryRepository : ICategoryRepository
         CancellationToken cancellationToken)
     {
         return _dbContext.Categories.AnyAsync(
-            category => category.Name == name
+            category => !category.IsDeleted
+                && category.Name == name
                 && (!excludedCategoryId.HasValue
                     || category.Id != excludedCategoryId.Value),
             cancellationToken);
@@ -49,7 +51,7 @@ public class CategoryRepository : ICategoryRepository
         CancellationToken cancellationToken)
     {
         return _dbContext.Categories.AnyAsync(
-            category => category.Id == id,
+            category => category.Id == id && !category.IsDeleted,
             cancellationToken);
     }
 
@@ -58,7 +60,7 @@ public class CategoryRepository : ICategoryRepository
         CancellationToken cancellationToken)
     {
         return _dbContext.Products.AnyAsync(
-            product => product.CategoryId == id,
+            product => product.CategoryId == id && !product.IsDeleted,
             cancellationToken);
     }
 
@@ -71,9 +73,10 @@ public class CategoryRepository : ICategoryRepository
             cancellationToken);
     }
 
-    public void Remove(Category category)
+    public void SoftDelete(Category category)
     {
-        _dbContext.Categories.Remove(category);
+        category.IsDeleted = true;
+        category.DeletedAt = DateTime.UtcNow;
     }
 
     public async Task SaveChangesAsync(

@@ -189,9 +189,58 @@ public class ProductService : IProductService
             return NotFoundResult();
         }
 
-        _productRepository.Remove(product);
+        _productRepository.SoftDelete(product);
 
         await _productRepository.SaveChangesAsync(cancellationToken);
+
+        return SuccessResult(product);
+    }
+
+    public async Task<ProductWriteResult> RestoreAsync(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        var product = await _productRepository.GetDeletedByIdAsync(
+            id,
+            cancellationToken);
+
+        if (product is null)
+        {
+            return NotFoundResult();
+        }
+
+        var categoryExists = await _categoryRepository.ExistsByIdAsync(
+            product.CategoryId,
+            cancellationToken);
+
+        if (!categoryExists)
+        {
+            return CategoryNotFoundResult();
+        }
+
+        var isDuplicate =
+            await _productRepository.ExistsByNameAndCategoryAsync(
+                product.Name,
+                product.CategoryId,
+                excludedProductId: product.Id,
+                cancellationToken);
+
+        if (isDuplicate)
+        {
+            return DuplicateNameResult();
+        }
+
+        _productRepository.Restore(product);
+
+        try
+        {
+            await _productRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception)
+            when (IsDuplicateNameException(exception))
+        {
+            return DuplicateNameResult();
+        }
 
         return SuccessResult(product);
     }

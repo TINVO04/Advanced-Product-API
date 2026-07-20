@@ -2,7 +2,7 @@
 
 Đây là project Product API của tuần 6, được làm tiếp từ project tuần trước.
 
-Trong Day 1 mình tập trung vào việc chuẩn hóa response và xử lý exception chung cho toàn bộ API. Sang Day 2 mình làm phần lấy danh sách sản phẩm với tìm kiếm, lọc, sắp xếp và phân trang. Đến Day 3 mình bổ sung Category API và thiết lập quan hệ giữa Category với Product.
+Trong Day 1 mình tập trung vào việc chuẩn hóa response và xử lý exception chung cho toàn bộ API. Sang Day 2 mình làm phần lấy danh sách sản phẩm với tìm kiếm, lọc, sắp xếp và phân trang. Đến Day 3 mình bổ sung Category API và thiết lập quan hệ giữa Category với Product. Trong Day 4 mình triển khai audit fields, soft delete, khôi phục Product đã xóa và logging cơ bản cho mỗi request.
 
 ## Công nghệ sử dụng
 
@@ -45,6 +45,18 @@ Trong Day 1 mình tập trung vào việc chuẩn hóa response và xử lý exc
 - Không cho xóa Category nếu vẫn còn Product sử dụng Category đó.
 - Bổ sung `categoryName` trong response của Product.
 - Dùng `Include` để lấy Category khi đọc Product.
+
+## Những phần đã làm trong Day 4
+
+- Tạo `AuditableEntity` dùng chung cho Product và Category với các field `CreatedAt`, `UpdatedAt`, `DeletedAt` và `IsDeleted`.
+- Tự động gán audit fields trong `AppDbContext` trước khi lưu thay đổi.
+- Chuyển thao tác DELETE Product và Category từ xóa cứng sang soft delete.
+- Lọc thủ công các Product và Category đã xóa khỏi API danh sách, chi tiết và các truy vấn kiểm tra dữ liệu.
+- Chuyển unique index sang partial unique index để bản ghi đã xóa không chặn việc tạo dữ liệu mới cùng tên.
+- Tạo endpoint `PATCH /api/products/{id}/restore` để khôi phục Product đã xóa.
+- Kiểm tra Category và dữ liệu trùng trước khi khôi phục Product.
+- Tạo `RequestLoggingMiddleware` để ghi method, path, status code và thời gian xử lý request ra console.
+- Kết hợp request logging với `GlobalExceptionMiddleware` để ghi warning cho lỗi nghiệp vụ và error cho lỗi server.
 
 ## Cấu trúc thư mục chính
 
@@ -146,16 +158,17 @@ Response Product trong Day 3 có thêm tên Category:
 
 | Method | Endpoint | Chức năng |
 | --- | --- | --- |
-| `GET` | `/api/products` | Lấy danh sách, tìm kiếm, lọc, sắp xếp và phân trang |
-| `GET` | `/api/products/{id}` | Lấy sản phẩm theo ID |
-| `POST` | `/api/products` | Thêm sản phẩm |
-| `PUT` | `/api/products/{id}` | Cập nhật sản phẩm |
-| `DELETE` | `/api/products/{id}` | Xóa sản phẩm |
-| `GET` | `/api/categories` | Lấy danh sách Category |
-| `GET` | `/api/categories/{id}` | Lấy Category theo ID |
+| `GET` | `/api/products` | Lấy danh sách, tìm kiếm, lọc, sắp xếp và phân trang các Product chưa xóa |
+| `GET` | `/api/products/{id}` | Lấy Product chưa xóa theo ID |
+| `POST` | `/api/products` | Thêm Product |
+| `PUT` | `/api/products/{id}` | Cập nhật Product |
+| `PATCH` | `/api/products/{id}/restore` | Khôi phục Product đã soft delete |
+| `DELETE` | `/api/products/{id}` | Soft delete Product |
+| `GET` | `/api/categories` | Lấy danh sách Category chưa xóa |
+| `GET` | `/api/categories/{id}` | Lấy Category chưa xóa theo ID |
 | `POST` | `/api/categories` | Thêm Category |
 | `PUT` | `/api/categories/{id}` | Cập nhật Category |
-| `DELETE` | `/api/categories/{id}` | Xóa Category nếu chưa có Product |
+| `DELETE` | `/api/categories/{id}` | Soft delete Category nếu không còn Product đang hoạt động |
 | `GET` | `/api/health` | Kiểm tra API có đang chạy không |
 | `GET` | `/api/info` | Xem thông tin project |
 
@@ -163,12 +176,12 @@ Response Product trong Day 3 có thêm tên Category:
 
 | Status                        | Trường hợp                                   |
 | ----------------------------- | ----------------------------------------------- |
-| `200 OK`                    | Lấy hoặc cập nhật dữ liệu thành công    |
+| `200 OK`                    | Lấy, cập nhật hoặc khôi phục dữ liệu thành công |
 | `201 Created`               | Tạo Product hoặc Category thành công       |
-| `204 No Content`            | Xóa Product hoặc Category thành công       |
+| `204 No Content`            | Soft delete Product hoặc Category thành công |
 | `400 Bad Request`           | Dữ liệu không hợp lệ hoặc Category không tồn tại |
-| `404 Not Found`             | Không tìm thấy Product hoặc Category       |
-| `409 Conflict`              | Dữ liệu bị trùng hoặc Category vẫn còn Product |
+| `404 Not Found`             | Không tìm thấy dữ liệu đang hoạt động hoặc Product đã xóa cần khôi phục |
+| `409 Conflict`              | Dữ liệu bị trùng, Category vẫn còn Product hoặc không thể khôi phục Product |
 | `500 Internal Server Error` | Có lỗi ngoài dự kiến ở server             |
 
 ## Cách chạy project
@@ -306,6 +319,37 @@ Một số điểm mình rút ra trong lúc làm:
 - `DeleteBehavior.Restrict` giúp database không tự động xóa Product khi Category bị xóa.
 - `Include` giúp EF Core lấy Product và Category trong cùng truy vấn để map `categoryName` vào response.
 - DTO giúp API chỉ nhận và trả những field cần thiết, không trả trực tiếp entity của EF Core.
+
+## Kết quả test Day 4
+
+| Trường hợp test | Kết quả |
+| --- | --- |
+| Build solution | Thành công, không có warning hoặc error |
+| Kiểm tra migration | Tất cả migration đã được áp dụng |
+| GET danh sách Product | `200 OK`, không có Product đã soft delete |
+| GET Product đã soft delete | `404 Not Found` |
+| DELETE Product | `204 No Content`, dữ liệu vẫn còn trong database với `IsDeleted = true` |
+| PATCH khôi phục Product đã xóa | `200 OK` |
+| GET Product sau khi khôi phục | `200 OK` |
+| PATCH Product đang hoạt động | `404 Not Found` |
+| PATCH Product khi Category đã xóa | `409 Conflict` |
+| PATCH Product bị trùng với Product đang hoạt động | `409 Conflict` |
+| DELETE Category còn Product đang hoạt động | `409 Conflict` |
+| Request thành công | Console có log bắt đầu, kết thúc, status code và thời gian xử lý |
+| Request lỗi `404` hoặc `409` | Console có warning và log status code cuối cùng |
+| Kiểm tra lại CRUD Product | POST `201`, PUT `200`, DELETE `204`, restore `200` |
+
+## Ghi chú Day 4
+
+Một số điểm mình rút ra trong lúc làm:
+
+- Soft delete giúp giữ lại lịch sử dữ liệu và cho phép khôi phục, nhưng mọi truy vấn đọc và kiểm tra trùng phải chủ động bỏ qua bản ghi đã xóa.
+- Việc gán `CreatedAt` và `UpdatedAt` trong `AppDbContext` giúp các repository và service không phải lặp lại logic thời gian.
+- `CreatedAt` chỉ được gán khi tạo mới, còn `UpdatedAt` được cập nhật mỗi khi entity thay đổi, bao gồm cả lúc soft delete và restore.
+- Partial unique index chỉ áp dụng cho bản ghi có `IsDeleted = false`, nhờ đó có thể tạo lại dữ liệu cùng tên sau khi bản ghi cũ đã bị xóa mềm.
+- Restore không chỉ đổi `IsDeleted` về `false`; service còn phải kiểm tra Category gốc và dữ liệu trùng để tránh khôi phục entity về trạng thái không hợp lệ.
+- Đặt `RequestLoggingMiddleware` trước `GlobalExceptionMiddleware` giúp middleware logging đo được toàn bộ request và ghi đúng status code sau khi exception đã được chuyển thành response.
+- `ILogger` hỗ trợ structured logging bằng message template, giúp log rõ ràng và dễ tìm kiếm hơn so với dùng `Console.WriteLine`.
 
 ## Ghi chú Day 2
 

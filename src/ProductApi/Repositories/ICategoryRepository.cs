@@ -28,7 +28,7 @@ public interface ICategoryRepository
         Category category,
         CancellationToken cancellationToken);
 
-    void Remove(Category category);
+    void SoftDelete(Category category);
 
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

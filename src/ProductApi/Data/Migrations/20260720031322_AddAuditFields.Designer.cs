@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ProductApi.Data;
@@ -11,9 +12,11 @@ using ProductApi.Data;
 namespace ProductApi.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720031322_AddAuditFields")]
+    partial class AddAuditFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -57,8 +60,7 @@ namespace ProductApi.Data.Migrations
 
                     b.HasIndex("Name")
                         .IsUnique()
-                        .HasDatabaseName("IX_Categories_Name")
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasDatabaseName("IX_Categories_Name");
 
                     b.ToTable("Categories", (string)null);
 
@@ -132,8 +134,7 @@ namespace ProductApi.Data.Migrations
 
                     b.HasIndex("Name", "CategoryId")
                         .IsUnique()
-                        .HasDatabaseName("IX_Products_Name_CategoryId")
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasDatabaseName("IX_Products_Name_CategoryId");
 
                     b.ToTable("Products", (string)null);
 

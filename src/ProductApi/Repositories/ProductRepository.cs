@@ -52,7 +52,18 @@ public class ProductRepository : IProductRepository
         return _dbContext.Products
             .Include(product => product.Category)
             .FirstOrDefaultAsync(
-                product => product.Id == id,
+                product => product.Id == id && !product.IsDeleted,
+                cancellationToken);
+    }
+
+    public Task<Product?> GetDeletedByIdAsync(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        return _dbContext.Products
+            .Include(product => product.Category)
+            .FirstOrDefaultAsync(
+                product => product.Id == id && product.IsDeleted,
                 cancellationToken);
     }
 
@@ -64,7 +75,8 @@ public class ProductRepository : IProductRepository
     {
         return _dbContext.Products.AnyAsync(
             product =>
-                product.Name == name
+                !product.IsDeleted
+                && product.Name == name
                 && product.CategoryId == categoryId
                 && (!excludedProductId.HasValue
                     || product.Id != excludedProductId.Value),
@@ -78,9 +90,16 @@ public class ProductRepository : IProductRepository
         await _dbContext.Products.AddAsync(product, cancellationToken);
     }
 
-    public void Remove(Product product)
+    public void SoftDelete(Product product)
     {
-        _dbContext.Products.Remove(product);
+        product.IsDeleted = true;
+        product.DeletedAt = DateTime.UtcNow;
+    }
+
+    public void Restore(Product product)
+    {
+        product.IsDeleted = false;
+        product.DeletedAt = null;
     }
 
     public async Task SaveChangesAsync(
@@ -91,7 +110,8 @@ public class ProductRepository : IProductRepository
 
     private IQueryable<Product> BuildQuery(string? search, int? categoryId)
     {
-        IQueryable<Product> query = _dbContext.Products;
+        IQueryable<Product> query = _dbContext.Products
+            .Where(product => !product.IsDeleted);
 
         if (!string.IsNullOrWhiteSpace(search))
         {

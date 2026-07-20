@@ -22,6 +22,10 @@ public interface IProductRepository
         int id,
         CancellationToken cancellationToken);
 
+    Task<Product?> GetDeletedByIdAsync(
+        int id,
+        CancellationToken cancellationToken);
+
     Task<bool> ExistsByNameAndCategoryAsync(
         string name,
         int categoryId,
@@ -32,7 +36,9 @@ public interface IProductRepository
         Product product,
         CancellationToken cancellationToken);
 
-    void Remove(Product product);
+    void SoftDelete(Product product);
+
+    void Restore(Product product);
 
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

@@ -25,4 +25,8 @@ public interface IProductService
     Task<ProductWriteResult> DeleteAsync(
         int id,
         CancellationToken cancellationToken);
+
+    Task<ProductWriteResult> RestoreAsync(
+        int id,
+        CancellationToken cancellationToken);
 }
