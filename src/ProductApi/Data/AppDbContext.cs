@@ -12,11 +12,52 @@ public class AppDbContext : DbContext
 
     public DbSet<Product> Products => Set<Product>();
 
+    public DbSet<Category> Categories => Set<Category>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.HasPostgresExtension("citext");
+
+        var categoryEntity = modelBuilder.Entity<Category>();
+
+        categoryEntity.ToTable("Categories");
+
+        categoryEntity.HasKey(category => category.Id);
+
+        categoryEntity
+            .Property(category => category.Id)
+            .UseIdentityByDefaultColumn()
+            .HasIdentityOptions(startValue: 4);
+
+        categoryEntity
+            .Property(category => category.Name)
+            .HasColumnType("citext")
+            .HasMaxLength(100)
+            .IsRequired();
+
+        categoryEntity
+            .HasIndex(category => category.Name)
+            .IsUnique()
+            .HasDatabaseName("IX_Categories_Name");
+
+        categoryEntity.HasData(
+            new Category
+            {
+                Id = 1,
+                Name = "Electronics"
+            },
+            new Category
+            {
+                Id = 2,
+                Name = "Audio"
+            },
+            new Category
+            {
+                Id = 3,
+                Name = "Accessories"
+            });
 
         var productEntity = modelBuilder.Entity<Product>();
 
@@ -47,6 +88,12 @@ public class AppDbContext : DbContext
             })
             .IsUnique()
             .HasDatabaseName("IX_Products_Name_CategoryId");
+
+        productEntity
+            .HasOne(product => product.Category)
+            .WithMany(category => category.Products)
+            .HasForeignKey(product => product.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         productEntity.HasData(
             new Product
