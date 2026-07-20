@@ -15,13 +15,22 @@ public class ProductRepository : IProductRepository
 
     public async Task<IReadOnlyList<Product>> GetAllAsync(
         string? search,
+        int? categoryId,
+        string sortBy,
+        string sortOrder,
         int page,
         int pageSize,
         CancellationToken cancellationToken)
     {
-        return await BuildQuery(search)
-            .AsNoTracking()
-            .OrderBy(product => product.Id)
+        var query = BuildQuery(search, categoryId)
+            .AsNoTracking();
+
+        var sortedQuery = ApplySorting(
+            query,
+            sortBy,
+            sortOrder);
+
+        return await sortedQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
@@ -29,9 +38,10 @@ public class ProductRepository : IProductRepository
 
     public Task<int> CountAsync(
         string? search,
+        int? categoryId,
         CancellationToken cancellationToken)
     {
-        return BuildQuery(search).CountAsync(cancellationToken);
+        return BuildQuery(search, categoryId).CountAsync(cancellationToken);
     }
 
     public Task<Product?> GetByIdAsync(
@@ -76,7 +86,7 @@ public class ProductRepository : IProductRepository
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private IQueryable<Product> BuildQuery(string? search)
+    private IQueryable<Product> BuildQuery(string? search, int? categoryId)
     {
         IQueryable<Product> query = _dbContext.Products;
 
@@ -90,6 +100,51 @@ public class ProductRepository : IProductRepository
                     $"%{trimmedSearch}%"));
         }
 
+        if (categoryId.HasValue)
+        {
+            query = query.Where(product =>
+                product.CategoryId == categoryId.Value);
+        }
+
         return query;
+    }
+
+    private static IOrderedQueryable<Product> ApplySorting(
+        IQueryable<Product> query,
+        string sortBy,
+        string sortOrder)
+    {
+        var isDescending = sortOrder == "desc";
+
+        return (sortBy, isDescending) switch
+        {
+            ("name", false) => query
+                .OrderBy(product => product.Name)
+                .ThenBy(product => product.Id),
+
+            ("name", true) => query
+                .OrderByDescending(product => product.Name)
+                .ThenBy(product => product.Id),
+
+            ("price", false) => query
+                .OrderBy(product => product.Price)
+                .ThenBy(product => product.Id),
+
+            ("price", true) => query
+                .OrderByDescending(product => product.Price)
+                .ThenBy(product => product.Id),
+
+            ("quantity", false) => query
+                .OrderBy(product => product.Quantity)
+                .ThenBy(product => product.Id),
+
+            ("quantity", true) => query
+                .OrderByDescending(product => product.Quantity)
+                .ThenBy(product => product.Id),
+
+            ("id", true) => query.OrderByDescending(product => product.Id),
+
+            _ => query.OrderBy(product => product.Id)
+        };
     }
 }

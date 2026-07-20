@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using ProductApi.Common.Responses;
 using ProductApi.Dtos;
 using ProductApi.Models;
 using ProductApi.Repositories;
@@ -18,35 +19,34 @@ public class ProductService : IProductService
         _productRepository = productRepository;
     }
 
-    public async Task<ProductListResponseDto> GetAllAsync(
-        string? search,
-        int page,
-        int pageSize,
+    public async Task<PagedResult<ProductResponseDto>> GetAllAsync(
+        ProductQueryDto query,
         CancellationToken cancellationToken)
     {
         var products = await _productRepository.GetAllAsync(
-            search,
-            page,
-            pageSize,
+            query.Search,
+            query.CategoryId,
+            query.SortBy,
+            query.SortOrder,
+            query.Page,
+            query.PageSize,
             cancellationToken);
 
         var totalItems = await _productRepository.CountAsync(
-            search,
+            query.Search,
+            query.CategoryId,
             cancellationToken);
 
-        return new ProductListResponseDto
+        return new PagedResult<ProductResponseDto>
         {
             Items = products
                 .Select(ToResponseDto)
                 .ToList(),
-            Pagination = new PaginationResponseDto
-            {
-                Page = page,
-                PageSize = pageSize,
-                TotalItems = totalItems,
-                TotalPages = (int)Math.Ceiling(
-                    totalItems / (double)pageSize)
-            }
+            PageNumber = query.Page,
+            PageSize = query.PageSize,
+            TotalItems = totalItems,
+            TotalPages = (int)Math.Ceiling(
+                totalItems / (double)query.PageSize)
         };
     }
 

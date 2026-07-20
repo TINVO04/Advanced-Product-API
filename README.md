@@ -2,7 +2,7 @@
 
 Đây là project Product API của tuần 6, được làm tiếp từ project tuần trước.
 
-Trong Day 1 mình tập trung vào việc chuẩn hóa response trả về và xử lý exception chung cho toàn bộ API.
+Trong Day 1 mình tập trung vào việc chuẩn hóa response và xử lý exception chung cho toàn bộ API. Sang Day 2 mình làm phần lấy danh sách sản phẩm với tìm kiếm, lọc, sắp xếp và phân trang.
 
 ## Công nghệ sử dụng
 
@@ -22,6 +22,18 @@ Trong Day 1 mình tập trung vào việc chuẩn hóa response trả về và x
 - Chuẩn hóa lỗi validation mặc định của ASP.NET Core.
 - Không trả stack trace hoặc nội dung exception nội bộ cho client.
 - Test các status code `200`, `201`, `204`, `400`, `404`, `409` và `500`.
+
+## Những phần đã làm trong Day 2
+
+- Tạo `ProductQueryDto` để gom các query parameter của API danh sách.
+- Tạo `PagedResult<T>` dùng chung cho dữ liệu phân trang.
+- Tìm kiếm sản phẩm theo tên, không phân biệt chữ hoa chữ thường.
+- Lọc sản phẩm theo `categoryId`.
+- Sắp xếp theo `id`, `name`, `price` hoặc `quantity`.
+- Hỗ trợ thứ tự `asc` và `desc`.
+- Giới hạn `pageSize` từ 1 đến 100.
+- Dùng chung điều kiện tìm kiếm và lọc khi lấy danh sách và đếm tổng số bản ghi.
+- Sắp xếp trước khi dùng `Skip` và `Take` để kết quả giữa các trang ổn định.
 
 ## Cấu trúc thư mục chính
 
@@ -71,17 +83,52 @@ Response lỗi validation:
 
 Riêng API DELETE khi thành công sẽ trả về `204 No Content` và không có body.
 
+Response danh sách sản phẩm có thêm thông tin phân trang:
+
+```json
+{
+  "success": true,
+  "message": "Products retrieved successfully.",
+  "data": {
+    "items": [],
+    "pageNumber": 1,
+    "pageSize": 10,
+    "totalItems": 0,
+    "totalPages": 0
+  },
+  "errors": null,
+  "timestampUtc": "2026-07-17T00:00:00Z"
+}
+```
+
+## Query parameter của API danh sách
+
+| Tham số | Mặc định | Ghi chú |
+| --- | --- | --- |
+| `search` | Không có | Tìm theo tên sản phẩm |
+| `categoryId` | Không có | Nếu truyền vào thì phải lớn hơn 0 |
+| `page` | `1` | Phải lớn hơn hoặc bằng 1 |
+| `pageSize` | `10` | Nhận giá trị từ 1 đến 100 |
+| `sortBy` | `id` | Nhận `id`, `name`, `price`, `quantity` |
+| `sortOrder` | `asc` | Nhận `asc` hoặc `desc` |
+
+Ví dụ:
+
+```http
+GET /api/products?search=phone&categoryId=1&sortBy=price&sortOrder=desc&page=1&pageSize=10
+```
+
 ## Các endpoint
 
-| Method     | Endpoint               | Chức năng                                                |
-| ---------- | ---------------------- | ---------------------------------------------------------- |
-| `GET`    | `/api/products`      | Lấy danh sách sản phẩm, có tìm kiếm và phân trang |
-| `GET`    | `/api/products/{id}` | Lấy sản phẩm theo ID                                    |
-| `POST`   | `/api/products`      | Thêm sản phẩm                                           |
-| `PUT`    | `/api/products/{id}` | Cập nhật sản phẩm                                      |
-| `DELETE` | `/api/products/{id}` | Xóa sản phẩm                                            |
-| `GET`    | `/api/health`        | Kiểm tra API có đang chạy không                       |
-| `GET`    | `/api/info`          | Xem thông tin project                                     |
+| Method | Endpoint | Chức năng |
+| --- | --- | --- |
+| `GET` | `/api/products` | Lấy danh sách, tìm kiếm, lọc, sắp xếp và phân trang |
+| `GET` | `/api/products/{id}` | Lấy sản phẩm theo ID |
+| `POST` | `/api/products` | Thêm sản phẩm |
+| `PUT` | `/api/products/{id}` | Cập nhật sản phẩm |
+| `DELETE` | `/api/products/{id}` | Xóa sản phẩm |
+| `GET` | `/api/health` | Kiểm tra API có đang chạy không |
+| `GET` | `/api/info` | Xem thông tin project |
 
 ## Các status code đang xử lý
 
@@ -184,3 +231,31 @@ Một số lỗi mình gặp trong lúc làm:
 - Mình tạo một endpoint tạm để test lỗi `500` và đã xóa endpoint đó sau khi test xong.
 
 Sau Day 1 mình hiểu rõ hơn cách middleware bắt exception, cách phân chia xử lý giữa controller và service, và lý do không nên trả stack trace cho client.
+
+## Kết quả test Day 2
+
+| Trường hợp test | Kết quả |
+| --- | --- |
+| Không truyền query parameter | Dùng `page = 1`, `pageSize = 10`, `sortBy = id`, `sortOrder = asc` |
+| Phân trang với `pageSize = 2` | Trả đúng số item và tổng số trang |
+| `page = 0` | `400 Bad Request` |
+| `pageSize = 101` | `400 Bad Request` |
+| Lọc theo category có dữ liệu | Trả đúng sản phẩm và `totalItems` |
+| Lọc theo category không có dữ liệu | Trả danh sách rỗng, không trả `404` |
+| Kết hợp search và category | Chỉ trả sản phẩm thỏa cả hai điều kiện |
+| Sắp xếp theo giá tăng và giảm | Thứ tự sản phẩm đúng |
+| Sắp xếp theo tên tăng dần | Thứ tự tên đúng |
+| Sắp xếp theo số lượng giảm dần | Thứ tự số lượng đúng |
+| `sortBy` không hợp lệ | `400 Bad Request` |
+| `sortOrder` không hợp lệ | `400 Bad Request` |
+| Sắp xếp kết hợp phân trang | Sắp xếp trước rồi mới lấy dữ liệu của trang |
+
+## Ghi chú Day 2
+
+Một số điểm mình rút ra trong lúc làm:
+
+- `IQueryable` giúp ghép từng điều kiện search và filter trước khi EF Core chạy câu SQL.
+- Query lấy danh sách và query đếm tổng số bản ghi phải dùng cùng điều kiện, nếu không metadata phân trang sẽ bị sai.
+- Không nên nhận tùy ý tên property từ client để sort. Mình dùng danh sách field cho phép và `switch` để kiểm soát.
+- Khi nhiều sản phẩm có cùng giá, tên hoặc số lượng, mình sort thêm theo `Id` để kết quả phân trang ổn định hơn.
+- Danh sách không có kết quả vẫn là request hợp lệ nên trả `200 OK` với `items` rỗng.

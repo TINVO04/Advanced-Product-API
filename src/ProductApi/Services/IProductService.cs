@@ -1,13 +1,12 @@
+using ProductApi.Common.Responses;
 using ProductApi.Dtos;
 
 namespace ProductApi.Services;
 
 public interface IProductService
 {
-    Task<ProductListResponseDto> GetAllAsync(
-        string? search,
-        int page,
-        int pageSize,
+    Task<PagedResult<ProductResponseDto>> GetAllAsync(
+        ProductQueryDto query,
         CancellationToken cancellationToken);
 
     Task<ProductResponseDto?> GetByIdAsync(
