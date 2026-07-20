@@ -32,7 +32,7 @@ public interface IProductRepository
         Product product,
         CancellationToken cancellationToken);
 
-    void Remove(Product product);
+    void SoftDelete(Product product);
 
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

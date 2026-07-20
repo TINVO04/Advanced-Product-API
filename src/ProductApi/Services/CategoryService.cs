@@ -119,7 +119,7 @@ public class CategoryService : ICategoryService
                 "Category cannot be deleted because it still has products.");
         }
 
-        _categoryRepository.Remove(category);
+        _categoryRepository.SoftDelete(category);
 
         await _categoryRepository.SaveChangesAsync(cancellationToken);
 

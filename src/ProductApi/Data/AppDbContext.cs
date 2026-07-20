@@ -48,6 +48,7 @@ public class AppDbContext : DbContext
         categoryEntity
             .HasIndex(category => category.Name)
             .IsUnique()
+            .HasFilter("\"IsDeleted\" = false")
             .HasDatabaseName("IX_Categories_Name");
 
         categoryEntity
@@ -103,6 +104,7 @@ public class AppDbContext : DbContext
                 product.CategoryId
             })
             .IsUnique()
+            .HasFilter("\"IsDeleted\" = false")
             .HasDatabaseName("IX_Products_Name_CategoryId");
 
         productEntity

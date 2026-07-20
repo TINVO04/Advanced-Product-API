@@ -189,7 +189,7 @@ public class ProductService : IProductService
             return NotFoundResult();
         }
 
-        _productRepository.Remove(product);
+        _productRepository.SoftDelete(product);
 
         await _productRepository.SaveChangesAsync(cancellationToken);
 
