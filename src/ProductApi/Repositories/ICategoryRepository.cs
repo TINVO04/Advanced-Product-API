@@ -20,6 +20,10 @@ public interface ICategoryRepository
         int id,
         CancellationToken cancellationToken);
 
+    Task<bool> HasProductsAsync(
+        int id,
+        CancellationToken cancellationToken);
+
     Task AddAsync(
         Category category,
         CancellationToken cancellationToken);

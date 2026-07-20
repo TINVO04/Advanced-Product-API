@@ -109,6 +109,16 @@ public class CategoryService : ICategoryService
             return false;
         }
 
+        var hasProducts = await _categoryRepository.HasProductsAsync(
+            id,
+            cancellationToken);
+
+        if (hasProducts)
+        {
+            throw new ConflictException(
+                "Category cannot be deleted because it still has products.");
+        }
+
         _categoryRepository.Remove(category);
 
         await _categoryRepository.SaveChangesAsync(cancellationToken);

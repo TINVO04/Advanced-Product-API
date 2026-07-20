@@ -53,6 +53,15 @@ public class CategoryRepository : ICategoryRepository
             cancellationToken);
     }
 
+    public Task<bool> HasProductsAsync(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        return _dbContext.Products.AnyAsync(
+            product => product.CategoryId == id,
+            cancellationToken);
+    }
+
     public async Task AddAsync(
         Category category,
         CancellationToken cancellationToken)
